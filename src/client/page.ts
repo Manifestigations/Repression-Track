@@ -8,6 +8,14 @@ import { PROCESSES, REFERENCES, TRIGGERS } from "./data.ts";
 import { clear, daysBetween, fmtDate, h } from "./dom.ts";
 import { EPISODES } from "./episodes.ts";
 import {
+  geoFor,
+  geoLabel,
+  geoOptions,
+  geoPath,
+  isNationalCase,
+  matchesGeo,
+} from "./geo.ts";
+import {
   GLOSSARY,
   glossaryById,
   glossaryByKind,
@@ -18,7 +26,7 @@ import {
 import type { Lang } from "./i18n.ts";
 import { t } from "./i18n.ts";
 import { htmlLang, persistLang } from "./lang.ts";
-import type { Process, Scope, Stage, Status, Tier } from "./model.ts";
+import type { Process, Stage, Status, Tier } from "./model.ts";
 import {
   TODAY,
   daysUntil,
@@ -33,7 +41,8 @@ import { NOTES, SANCTIONS } from "./notes.ts";
 import { SOURCES } from "./sources.ts";
 
 interface State {
-  scope: Scope | "all";
+  /** id from src/client/geo.ts; "france" = every place */
+  geo: string;
   tier: Tier | "all";
   stage: Stage | "all";
   status: Status | "all";
@@ -43,7 +52,7 @@ interface State {
 }
 
 const STATE: State = {
-  scope: "all",
+  geo: "france",
   tier: "all",
   stage: "all",
   status: "all",
@@ -80,10 +89,19 @@ const STATUSES: Status[] = [
 
 let currentLang: Lang = "en";
 
+/**
+ * Look a string up, but fall back to literal text if the key is not in
+ * `i18n.ts` yet. Keeps the page readable while the geo strings are added.
+ */
+function tx(key: string, fallback: string): string {
+  const v = t(currentLang, key) as string | undefined;
+  return v && v !== key ? v : fallback;
+}
+
 function filtered(): Process[] {
   const q = STATE.query.trim().toLowerCase();
   return PROCESSES.filter((p) => {
-    if (STATE.scope !== "all" && p.scope !== STATE.scope) return false;
+    if (!matchesGeo(p, STATE.geo)) return false;
     if (STATE.tier !== "all" && p.tier !== STATE.tier) return false;
     if (STATE.stage !== "all" && p.stage !== STATE.stage) return false;
     if (STATE.status !== "all" && p.status !== STATE.status) return false;
@@ -97,7 +115,8 @@ function filtered(): Process[] {
       p.forum.toLowerCase().includes(q) ||
       p.note.toLowerCase().includes(q) ||
       (p.city ?? "").toLowerCase().includes(q) ||
-      (p.dept ?? "").toLowerCase().includes(q)
+      (p.dept ?? "").toLowerCase().includes(q) ||
+      geoLabel(geoFor(p), currentLang).toLowerCase().includes(q)
     );
   });
 }
@@ -141,6 +160,8 @@ function deadlineCell(p: Process): HTMLElement {
 }
 
 function row(p: Process): HTMLElement {
+  const geo = geoFor(p);
+  const national = isNationalCase(p);
   return h(
     "tr",
     null,
@@ -156,9 +177,20 @@ function row(p: Process): HTMLElement {
     ),
     h(
       "td",
-      null,
+      { title: geoPath(geo, currentLang) },
       h("div", { text: p.city ?? "—" }),
-      h("span", { class: "conf", text: p.dept ? `dept ${p.dept}` : p.scope }),
+      national
+        ? h("span", {
+            class: "geo-badge",
+            text: tx("geoNational", "Applies across all of France"),
+          })
+        : h("span", {
+            class: "conf",
+            text: p.dept ? `dept ${p.dept}` : p.scope,
+          }),
+      national
+        ? null
+        : h("div", { class: "geo-path", text: geoPath(geo, currentLang) }),
     ),
     h("td", null, h("span", { class: "conf", text: t(currentLang, p.stage) })),
     h(
@@ -613,20 +645,110 @@ function select<T extends string>(
   return sel;
 }
 
-function buildControls(rerender: () => void): HTMLElement {
-  const scopeSel = select<Scope | "all">(
-    STATE.scope,
-    [
-      ["all", t(currentLang, "allScopes")],
-      ["herault", t(currentLang, "herault")],
-      ["occitanie", t(currentLang, "occitanie")],
-      ["national", t(currentLang, "national")],
-    ],
-    (v) => {
-      STATE.scope = v;
+/**
+ * Four-level place selector: France › region › department › city.
+ * Options come from the data, so a region with no case never appears.
+ *
+ * Counts are geographic: national rows are subtracted, because they show up
+ * under every filter and would otherwise inflate every branch of the tree.
+ */
+function buildGeoSelect(
+  cases: Process[],
+  rerender: () => void,
+): HTMLSelectElement {
+  const sel = h("select", {
+    class: "geo-select",
+    id: "geo-filter",
+    onChange: (ev: Event) => {
+      STATE.geo = (ev.target as HTMLSelectElement).value;
       rerender();
     },
+  });
+
+  const nationalCount = cases.filter(isNationalCase).length;
+  const local = (n: number): number => Math.max(0, n - nationalCount);
+  const depthPad = (d: number): string => "\u00A0\u00A0".repeat(d);
+
+  sel.append(
+    h("option", {
+      value: "france",
+      text: `${tx("geoAll", "All of France")} — ${cases.length}`,
+    }),
   );
+
+  const unplaced = cases.filter((c) => geoFor(c) === "non-attribue").length;
+  if (unplaced) {
+    sel.append(
+      h("option", {
+        value: "non-attribue",
+        text: `${tx("geoUnplaced", "Not tied to one place")} — ${unplaced}`,
+      }),
+    );
+  }
+
+  const opts = geoOptions(cases, currentLang);
+  const regions = opts.filter((o) => o.depth === 0);
+
+  for (const region of regions) {
+    const group = h("optgroup", { label: region.label });
+
+    group.append(
+      h("option", {
+        value: region.id,
+        text: `${region.label} — ${tx("geoRegion", "region")} (${local(region.count)})`,
+      }),
+    );
+
+    for (const dept of opts.filter(
+      (o) => o.depth === 1 && o.regionId === region.id,
+    )) {
+      group.append(
+        h("option", {
+          value: dept.id,
+          text: `${depthPad(1)}${dept.label} — ${tx("geoDept", "department")} (${local(dept.count)})`,
+        }),
+      );
+
+      for (const city of opts.filter(
+        (o) => o.depth === 2 && o.parentId === dept.id,
+      )) {
+        group.append(
+          h("option", {
+            value: city.id,
+            text: `${depthPad(2)}${city.label} — ${tx("geoCity", "city")} (${local(city.count)})`,
+          }),
+        );
+      }
+    }
+
+    sel.append(group);
+  }
+
+  if (nationalCount) {
+    sel.append(
+      h("optgroup", {
+        label: tx("geoNationalGroup", "Applies everywhere"),
+      }),
+    );
+    sel.append(
+      h("option", {
+        value: "national",
+        text: `${tx("geoNational", "Applies across all of France")} (${nationalCount})`,
+      }),
+    );
+  }
+
+  // Set after the options exist, so the choice survives a full re-render.
+  sel.value = STATE.geo;
+  if (!sel.value) {
+    STATE.geo = "france";
+    sel.value = "france";
+  }
+  return sel;
+}
+
+function buildControls(rerender: () => void): HTMLElement {
+  const geoSel = buildGeoSelect(PROCESSES, rerender);
 
   const tierSel = select<Tier | "all">(
     STATE.tier,
@@ -698,7 +820,7 @@ function buildControls(rerender: () => void): HTMLElement {
     class: "btn",
     text: t(currentLang, "reset"),
     onClick: () => {
-      STATE.scope = "all";
+      STATE.geo = "france";
       STATE.tier = "all";
       STATE.stage = "all";
       STATE.status = "all";
@@ -723,8 +845,8 @@ function buildControls(rerender: () => void): HTMLElement {
   return h(
     "div",
     { class: "controls" },
-    h("label", { text: t(currentLang, "scope") }),
-    scopeSel,
+    h("label", { text: tx("geo", "Where in France") }),
+    geoSel,
     h("label", { text: t(currentLang, "tier") }),
     tierSel,
     h("label", { text: t(currentLang, "stage") }),
@@ -799,6 +921,13 @@ function boot(): void {
       kpiCard(s.unverified, t(currentLang, "kpiUnverified"), "warn"),
     ),
     buildControls(rerender),
+    h("p", {
+      class: "geo-hint",
+      text: tx(
+        "geoHint",
+        "Four levels: all of France, a region, a department, a city. Rulings by the Conseil d'État and national instructions stay in the list wherever you look, because they bind everywhere.",
+      ),
+    }),
     h(
       "div",
       { class: "grid split" },

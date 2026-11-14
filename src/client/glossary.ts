@@ -57,12 +57,15 @@ export const GLOSSARY: GlossaryEntry[] = [
   },
   {
     id: "scope",
-    term: "Territory",
+    term: "Where in France",
+    fr: "Où en France",
     kind: "tracker",
     plain:
-      "Which area of France the case belongs to. 'Hérault' is the original local dossier; 'Occitanie' is the wider south-west region; 'National' covers everything else, including cases decided in Paris that apply across the country.",
-    where: "Filter menu.",
-    see: ["national"],
+      "The place filter. It works at four levels: the whole of France, a region, a department, or a city. Picking a wider area keeps the narrower cases inside it — pick Occitanie and you get Hérault and Montpellier too.",
+    french:
+      "Some decisions are marked 'Applies across all of France' and stay in the list whatever you pick. That is because a ruling by the Conseil d'État binds everywhere, even though it was decided in Paris.",
+    where: "First filter, top of the list.",
+    see: ["region", "dept", "prefecture"],
   },
   {
     id: "tier",
@@ -1110,6 +1113,35 @@ export const GLOSSARY: GlossaryEntry[] = [
     plain:
       "Every order is limited in time. This is one of the most important checks in the tracker: the Conseil d'État has accepted that the circumstances justifying bans were those of 17 October, so the orders have to justify themselves as time passes.",
     see: ["couvre_feu", "periode", "proportionality"],
+  },
+  {
+    id: "region",
+    term: "Region",
+    fr: "région",
+    kind: "french",
+    plain:
+      "One of France's 18 administrative regions. A region groups departments and is run by a regional council and a prefect. France has had this map since 1 January 2016: 13 regions in metropolitan France and 5 overseas.",
+    see: ["dept", "prefecture"],
+  },
+  {
+    id: "dept",
+    term: "Department",
+    fr: "département",
+    kind: "french",
+    plain:
+      "A local administrative area of France, roughly a county. A department is led by a prefect and is subdivided into communes, the smallest administrative unit. Hérault, where Montpellier sits, is a department in the Occitanie region.",
+    see: ["region", "prefecture", "commune"],
+  },
+  {
+    id: "prefecture",
+    term: "Prefecture",
+    fr: "préfecture",
+    kind: "french",
+    plain:
+      "Two things: the administrative headquarters of a department, and the officials working there. A prefect's order is signed at the prefecture and published in the official collection of departmental orders.",
+    french:
+      "Do not confuse it with the 'prefect', the person. There are 101 departments in France.",
+    see: ["prefect", "raa", "dept"],
   },
 ];
 
