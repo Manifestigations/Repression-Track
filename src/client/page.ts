@@ -1,3 +1,4 @@
+import { buildAtlasPanel } from "./atlas.ts";
 import {
   renderCoverage,
   renderDeadlines,
@@ -906,6 +907,7 @@ function boot(): void {
         ),
       ),
     ),
+    buildAtlasPanel(currentLang),
     buildEpisodes(),
     h(
       "div",

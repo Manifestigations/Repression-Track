@@ -64,3 +64,17 @@ export function makeTodayLine(dayIndex: number, color = "#ffd166"): Plugin {
     },
   };
 }
+
+export function destroy(id: string): void {
+  registry.get(id)?.destroy();
+  registry.delete(id);
+}
+
+/** Tear down every chart whose id starts with `prefix` (e.g. on page re-render). */
+export function destroyMounted(prefix = ""): void {
+  for (const [id, chart] of registry) {
+    if (!id.startsWith(prefix)) continue;
+    chart.destroy();
+    registry.delete(id);
+  }
+}

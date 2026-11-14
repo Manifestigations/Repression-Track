@@ -6,16 +6,18 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "build": "esbuild src/client/main.ts --bundle --format=esm --target=es2022 --outfile=docs/bundle.js --sourcemap",
+    "build": "esbuild src/client/main.ts --bundle --format=esm --target=es2022 --outfile=docs/bundle.js --sourcemap --loader:.png=dataurl --loader:.svg=dataurl --loader:.gif=dataurl --loader:.jpg=dataurl",
     "start": "npm run build && node server.ts",
     "dev:client": "npm run build -- --watch",
     "dev:server": "node --watch server.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "chart.js": "^4.5.0"
+    "chart.js": "^4.5.0",
+    "leaflet": "^1.9.4"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^24.0.0",
     "esbuild": "^0.25.0",
     "typescript": "^5.9.0"

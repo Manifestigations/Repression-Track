@@ -661,3 +661,211 @@ td.title span {
   font-size: 11.5px;
   margin: 2px 0 0;
 }
+
+/* ---------- territorial atlas (choropleth + isometric bar clusters) ---------- */
+.atlas-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 10px;
+}
+.atlas-head h2 {
+  margin: 0 0 4px;
+}
+.atlas-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.atlas-badge {
+  flex: none;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--indemn);
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+.atlas-stage {
+  position: relative;
+  height: 560px;
+  margin: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.atlas-map {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 60% 40%, #101725, #0b0e14 70%);
+}
+.atlas-map .leaflet-tile-pane {
+  opacity: 0.5;
+  filter: saturate(0.45) brightness(0.75);
+}
+.atlas-map .leaflet-container {
+  background: transparent;
+  font: inherit;
+}
+.atlas-map .leaflet-control-zoom a {
+  background: var(--panel-2);
+  color: var(--muted);
+  border-color: var(--line);
+}
+.atlas-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  pointer-events: none;
+}
+.atlas-cluster {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 150px;
+  will-change: transform;
+  pointer-events: none;
+}
+.atlas-cluster-chart {
+  height: 96px;
+  pointer-events: auto;
+}
+.atlas-cluster-label {
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--muted);
+  text-shadow: 0 1px 3px #000a;
+}
+.atlas-cluster-label b {
+  display: block;
+  color: var(--text);
+  font-size: 11px;
+}
+.atlas-cluster-count {
+  display: block;
+}
+.atlas-cluster-gap {
+  display: inline-block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 9px;
+  color: var(--dim);
+  border: 1px dashed var(--line-2);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+.atlas-cluster--empty {
+  width: 130px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  font-size: 9.5px;
+  color: var(--dim);
+  border: 1px dashed var(--line-2);
+  border-radius: 5px;
+  background: #0b0e1499;
+}
+.atlas-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 16px 14px;
+  font-size: 11px;
+  color: var(--dim);
+}
+.atlas-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.atlas-ramp {
+  width: 82px;
+  height: 8px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #172033, #264e8c, #4f8cff, #3ddc97);
+}
+.atlas-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.atlas-key i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.atlas-gaps {
+  flex: 1 1 260px;
+  color: var(--muted);
+}
+.atlas-gaps b {
+  color: var(--dim);
+  font-weight: 600;
+}
+.atlas-status {
+  margin: 0;
+  color: var(--indemn);
+}
+.atlas-tip {
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  color: var(--text);
+  font-size: 11px;
+  border-radius: 6px;
+  box-shadow: none;
+}
+.atlas-tip::before {
+  border-top-color: var(--line-2);
+}
+@media (max-width: 720px) {
+  .atlas-stage {
+    height: 420px;
+  }
+  .atlas-cluster {
+    width: 118px;
+  }
+  .atlas-cluster-chart {
+    height: 78px;
+  }
+}
+
+.atlas-stage {
+  position: relative;
+  height: 560px;
+  overflow: hidden;
+}
+.atlas-map {
+  position: absolute;
+  inset: 0;
+} /* Leaflet sizes panes from this */
+.atlas-map.leaflet-container {
+  background: transparent;
+  font: inherit;
+  outline: none;
+}
+.atlas-map .leaflet-tile-pane {
+  opacity: 0.5;
+  filter: saturate(0.45) brightness(0.75);
+}
+.atlas-notiles .leaflet-tile-pane {
+  display: none;
+}
+.atlas-notiles {
+  background:
+    radial-gradient(circle at 58% 42%, #131c2c 0%, #0b0e14 68%),
+    repeating-linear-gradient(0deg, #ffffff08 0 1px, transparent 1px 44px),
+    repeating-linear-gradient(90deg, #ffffff08 0 1px, transparent 1px 44px);
+  background-blend-mode: normal, screen, screen;
+}
+.atlas-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  pointer-events: none;
+}
