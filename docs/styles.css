@@ -520,3 +520,116 @@ td.title span {
   color: var(--muted);
   font-size: 11.5px;
 }
+
+/* ---- plain-language glossary ---- */
+.gl-intro {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0 0 10px;
+}
+.gl-search {
+  margin-bottom: 8px;
+}
+.gl-search input {
+  width: 100%;
+  max-width: 420px;
+}
+.gl-count {
+  color: var(--muted);
+  font-size: 11.5px;
+  margin-bottom: 10px;
+}
+.gl-block {
+  border-top: 1px solid #1f2735;
+  padding-top: 10px;
+  margin-top: 10px;
+}
+.gl-h {
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 0 0 8px;
+}
+.gl-h.gl-tracker {
+  color: #4f8cff;
+}
+.gl-h.gl-general {
+  color: #3ddc97;
+}
+.gl-h.gl-french {
+  color: #ffd166;
+}
+.gl-item {
+  border: 1px solid #1f2735;
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 7px;
+  background: rgba(255, 255, 255, 0.015);
+}
+.gl-item summary {
+  cursor: pointer;
+  font-size: 13.5px;
+}
+.gl-item summary::marker {
+  color: #5b6478;
+}
+.gl-fr {
+  color: var(--muted);
+  font-size: 11.5px;
+  margin-left: 8px;
+  font-style: italic;
+}
+.gl-plain {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.gl-fr-note {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #c9d1e0;
+}
+.gl-law,
+.gl-where,
+.gl-see {
+  margin: 5px 0 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.gl-see a {
+  color: #4f8cff;
+  text-decoration: none;
+  margin-right: 8px;
+}
+.gl-see a:hover {
+  text-decoration: underline;
+}
+.gl-item.flash {
+  outline: 2px solid #ffd166;
+  outline-offset: 2px;
+}
+.gl-empty {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.chip-mini {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid #2a3346;
+  background: #161c27;
+  color: #9fb0c9;
+  cursor: pointer;
+}
+.chip-mini:hover {
+  color: #ffd166;
+  border-color: #ffd166;
+}

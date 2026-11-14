@@ -56,19 +56,21 @@ export interface Process {
   jurisdiction: string;
   city?: string;
   dept?: string;
-  scope: Scope;
-  tier: Tier;
-  stage: Stage;
-  status: Status;
-  verdict?: Verdict;
+  scope: "herault" | "occitanie" | "national";
+  /** precise placement — id from src/client/geo.ts */
+  geo?: string;
+  tier: "admin" | "penal" | "indemn";
+  stage: string;
+  status: string;
+  verdict: string;
   order?: string;
   opened: string;
   resolved?: string;
   deadlines: Deadline[];
-  note: string;
+  note?: string;
   holding?: string;
   unverified?: boolean;
-  sourceKeys?: string[];
+  sourceKeys: string[];
 }
 
 export interface Reference {

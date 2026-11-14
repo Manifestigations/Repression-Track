@@ -6,46 +6,56 @@ export interface Note {
 
 export const NOTES: Note[] = [
   {
-    title: "A prefectoral ban HAS been annulled",
-    body: "On 10 November the TA Paris annulled the Préfecture de police's order banning the Bastille–Pitié-Salpêtrière route for the student coordination, holding that the security note was « peu précise et peu circonstanciée » and that the incidents of 24 October, 31 October and 7 November did not establish a renewed risk. The court found an « atteinte grave et manifestement illégale à la liberté de manifester ». This supersedes the earlier note stating that no prefectural ban had been annulled.",
+    title: "A government ban has now been cancelled by a court",
+    body: "On 10 November the Paris administrative tribunal cancelled a police-prefect's order that had banned the student coordination's route. The court found the internal security briefing 'too imprecise and too lacking in detail', and said the incidents of 24 and 31 October and 7 November did not establish a fresh risk of disorder. It concluded that the order 'seriously and manifestly unlawfully infringed the freedom to demonstrate'. This replaces the earlier note saying no ban had been cancelled.",
   },
   {
-    title: "Two opposite annulments on the same subject",
-    body: "On 31 October the Conseil d'État annulled the TA Paris judgment, restoring the ban on the Bastille–Nation route. Reading either decision without its object produces the wrong answer: CE 521001 annuls a decision refusing the ban, the TA of 10 November annuls the ban itself.",
+    title: "Two opposite cancellations that are easy to confuse",
+    body: "On 31 October the Conseil d'État cancelled the Paris tribunal's ruling, which restored the ban on the Bastille–Nation route. On 10 November the Paris tribunal cancelled a ban. So 'cancelled' has meant two different things eight days apart: once the court's refusal to allow the march, once the government's ban itself. Every row in this tracker says which one it means.",
   },
   {
-    title: "Nothing is scheduled for decision in Hérault",
-    body: "No annulation judgment on the October arrêtés is listed. The November rolls were stopped on 3 November with no manifestation case on them; expect a December fixing, and a reserved judgment delivered weeks after any hearing.",
+    title: "Nothing is scheduled for a decision in Hérault",
+    body: "No ruling on the October bans has been listed. The November hearing lists were frozen on 3 November with no demonstration case on them, so expect a date to be set in December and a judgment delivered some weeks after the hearing.",
   },
   {
-    title: "Emergency relief settled nothing on the merits",
-    body: "Almost everything here is référé-liberté (CJA L. 521-2): the judge rules within 48 hours on the day, and the recours en annulation remains open before the TA, then the CAA, then the CE.",
+    title: "Emergency rulings settle very little",
+    body: "Almost everything here was decided in an emergency procedure where the judge has 48 hours to rule, usually on the night before or the morning of a demonstration. The full argument still has to happen later. That is why so many cases in this tracker are 'still running'.",
   },
   {
-    title: "Three distinct criminal regimes",
-    body: "Do not merge them. (1) Investigation and GAV allocation. (2) Sentences, appealable — the 9 cases declared « non saisis » at Paris for exceeding the 20-hour presentation deadline are nullities of procedure, not acquittals. (3) Judicial measures such as the Nantes « interdiction de manifester », which is a controlJudicial measure and cannot be challenged before the administrative court.",
+    title: "Three different criminal tracks, which should not be mixed up",
+    body: "First, investigation and police custody: how long a person can be held, and which charges are considered. Second, sentencing: the prison terms, fines and suspended sentences actually imposed, appealable within ten days of the reading of the judgment (Code of procedure pénale, article 498). Third, judicial measures such as the Nantes order not to take part in demonstrations, which is a condition of judicial supervision (article 138, 3° bis) and cannot be challenged before an administrative court.",
   },
   {
-    title: "Open data routes are undocumented and versioned",
-    body: "The platform states it 'ne comporte pas d'API'. Route families have already shifted once (elastic/decisions now 404s). Pin the route and re-verify each run.",
+    title: "Nine people were released because the clock ran out",
+    body: "In nine Paris cases the court declared itself not seized, because the person had not been brought before a prosecutor or judge within the twenty hours allowed by article 803-3 of the Code of procedure pénale. That is a procedural failure, not an acquittal: the people were released and will be retried, and the prosecution itself is unaffected.",
   },
   {
-    title: "Unverified entries are flagged",
-    body: "Rows marked with a warning triangle have not been opened or screened. Several rest on press summaries whose source page has since returned 404 — notably the Montpellier 5 November arrests, for which the France 3 Occitanie page is gone.",
+    title: "Which offences can someone be charged with?",
+    body: "Taking part in a demonstration that has been banned is a fourth-class contravention (Penal Code, article R. 644-4): a fine of €750, or €135 on the spot, with no violence required. Taking part in an undeclared demonstration is not itself an offence, but organising a banned or undeclared demonstration is a délit (article 431-9). Staying in an unlawful gathering after a dispersal order is a délit (article 431-4). A bill adopted in first reading by the Sénat on 28 October would turn participation in a banned demonstration into a délit as well.",
   },
   {
-    title: "Two instruments, two notification dates",
-    body: "The CE recites an arrêté of 22 October « confirmé par un arrêté du lendemain »; the TA order describes the 22 October arrêté as revealed by a press communiqué. Both notification dates are the pivot of the CPI L. 211-4 ground.",
+    title: "Two points to verify before quoting this tracker",
+    body: "First, the one-month appeal period against an administrative court judgment is applied here on the basis of settled practice, but the consolidated text of article R. 421-1 as published on Légifrance states the two-month rule without spelling this out; the citation should be checked. Second, several open-data routes used to locate cases have already changed once, so each run needs re-verification.",
+  },
+  {
+    title: "Rows marked with a warning triangle",
+    body: "These are cases we know about but have not been able to read in full, usually because only a press summary survives and the original page has gone. Their details are provisional.",
+    unverified: true,
+  },
+  {
+    title: "Two dates for the same instrument",
+    body: "The Conseil d'État describes an order of 22 October as 'revealed by the press communiqué and confirmed by an order the following day', while the tribunal's ruling describes the same order of 22 October as revealed by the communiqué. The two notification dates are the pivot of the argument that the organisers were not properly informed.",
     unverified: true,
   },
 ];
 
 export const SANCTIONS = [
-  "Retroactivity: an annulled arrêté is deemed never to have existed, so the contravention basis for participants disappears (R. 644-4 / R. 644-5-1 CP). This is the sharpest point: the 24 October arrests in Paris, Nantes, Brest and Montpellier were all prosecuted under orders later suspended or annulled.",
-  "The practical asymmetry: the Paris annulment of 10 November concerns an order for a demonstration that had not yet taken place, so its retroactive effect is limited. The annulled or suspended orders of 24 October concern demonstrations that did happen and where arrests occurred — there the retroactivity argument is live.",
-  "State liability: compensation for the wrongful ban and, for the policing operation itself, faute lourde (CE, 31 May 2024, n° 468316).",
-  "No automatic personal sanction on the préfet: disciplinary liability before the Minister of the Interior is the real channel.",
-  "Criminal exposure arises only beyond the annulled decision — abus d'autorité (CP 432-1 ff.) if the ban is maintained to defeat a judgment.",
-  "No judicial bar on future bans, but a fresh order is required, cannot regularise the old one, and must be justified on the persistence of proven risk.",
-  "The annulment of 10 November is a référé decision, not a merits ruling. The administration may appeal to the CAA Paris within two months (estimated 10 January 2027) and re-issue an order on the same day.",
+  "It wipes the slate. A cancelled order is treated as if it had never existed, so the legal basis for any prosecution under it disappears. This is the sharpest point in the whole dossier: the arrests made in Paris, Nantes, Brest and Montpellier in the days after 17 October were pursued under orders that have since been suspended or cancelled.",
+  "But the timing decides how much it matters. The Paris cancellation of 10 November concerned a demonstration that had not happened yet, so its retroactive effect is limited. The suspended or cancelled orders of 24 October concerned demonstrations that did happen and did produce arrests — there the retroactivity argument is live.",
+  "Money may follow. A person wrongly prevented from demonstrating can claim compensation for the harm done, and a person wrongly arrested can claim compensation for the harm of the arrest.",
+  "For the policing operation itself, compensation requires something much stronger than an error: the state generally has to be shown to have been seriously at fault.",
+  "No automatic punishment for the prefect. Disciplinary responsibility before the Minister of the Interior is the realistic route.",
+  "Criminal exposure comes only further out: it would require a public official to keep a ban in force in order to defeat a judgment, which is the offence of abuse of power.",
+  "There is no judicial ban on future bans. A fresh order can be issued the same day, but it cannot paper over the cancelled one and must justify itself on risks that still exist.",
+  "And the 10 November cancellation is itself an emergency ruling, not a final judgment. The administration can appeal it to the Paris appeal court and re-issue an order.",
 ];

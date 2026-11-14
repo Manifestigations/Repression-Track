@@ -1,29 +1,36 @@
-import { h, clear, fmtDate, daysBetween } from "./dom.ts";
-import { t } from "./i18n.ts";
+import {
+  renderCoverage,
+  renderDeadlines,
+  renderStatusMix,
+  renderTimeline,
+} from "./chart.ts";
+import { PROCESSES, REFERENCES, TRIGGERS } from "./data.ts";
+import { clear, daysBetween, fmtDate, h } from "./dom.ts";
+import { EPISODES } from "./episodes.ts";
+import {
+  GLOSSARY,
+  glossaryById,
+  glossaryByKind,
+  termsForCase,
+  type GlossaryEntry,
+  type GlossaryKind,
+} from "./glossary.ts";
 import type { Lang } from "./i18n.ts";
-import { persistLang, htmlLang } from "./lang.ts";
+import { t } from "./i18n.ts";
+import { htmlLang, persistLang } from "./lang.ts";
+import type { Process, Scope, Stage, Status, Tier } from "./model.ts";
 import {
   TODAY,
   daysUntil,
   nextDeadline,
-  openDeadlines,
   sortByUrgency,
   stats,
-  urgencyOf,
   statusClass,
+  urgencyOf,
   verdictClass,
 } from "./model.ts";
-import type { Process, Status, Tier, Scope, Stage, Verdict } from "./model.ts";
-import { PROCESSES, REFERENCES, TRIGGERS } from "./data.ts";
-import { EPISODES } from "./episodes.ts";
 import { NOTES, SANCTIONS } from "./notes.ts";
 import { SOURCES } from "./sources.ts";
-import {
-  renderTimeline,
-  renderDeadlines,
-  renderStatusMix,
-  renderCoverage,
-} from "./chart.ts";
 
 interface State {
   scope: Scope | "all";
@@ -167,10 +174,30 @@ function row(p: Process): HTMLElement {
             { style: "margin-top:4px" },
             h("span", {
               class: verdictClass(p.verdict),
-              text: t(currentLang, p.verdict),
+              text: t(currentLang, `v_${p.verdict}`),
             }),
           )
         : null,
+      h(
+        "div",
+        { class: "chips" },
+        ...termsForCase(p)
+          .slice(0, 4)
+          .map((e) =>
+            h("button", {
+              class: "chip-mini",
+              text: e.term,
+              title: e.plain,
+              onClick: (ev: Event) => {
+                ev.preventDefault();
+                document
+                  .getElementById(`gl-${e.id}`)
+                  ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                document.getElementById(`gl-${e.id}`)?.classList.add("flash");
+              },
+            }),
+          ),
+      ),
     ),
     deadlineCell(p),
     countdownCell(p),
@@ -416,6 +443,113 @@ function buildReferences(): HTMLElement {
         ),
       ),
     ),
+  );
+}
+
+function glossaryEntryRow(e: GlossaryEntry): HTMLElement {
+  return h(
+    "details",
+    { class: "gl-item", id: `gl-${e.id}` },
+    h(
+      "summary",
+      null,
+      h("b", { text: e.term }),
+      e.fr ? h("span", { class: "gl-fr", text: e.fr }) : null,
+    ),
+    h("p", { class: "gl-plain", text: e.plain }),
+    e.french ? h("p", { class: "gl-fr-note", text: e.french }) : null,
+    e.law
+      ? h("p", {
+          class: "gl-law",
+          text: `${t(currentLang, "glossaryLaw")}: ${e.law}`,
+        })
+      : null,
+    e.where
+      ? h("p", {
+          class: "gl-where",
+          text: `${t(currentLang, "glossaryWhere")}: ${e.where}`,
+        })
+      : null,
+    e.see && e.see.length
+      ? h(
+          "p",
+          { class: "gl-see" },
+          `${t(currentLang, "glossarySee")}: `,
+          ...e.see.map((id, i) => {
+            const target = glossaryById(id);
+            return target
+              ? h("a", {
+                  href: `#gl-${id}`,
+                  text: target.term,
+                  onClick: (ev: Event) => {
+                    ev.preventDefault();
+                    document
+                      .getElementById(`gl-${id}`)
+                      ?.scrollIntoView({ behavior: "smooth" });
+                  },
+                })
+              : null;
+          }),
+        )
+      : null,
+  );
+}
+
+function buildGlossary(): HTMLElement {
+  const query = h("input", {
+    type: "search",
+    placeholder: t(currentLang, "glossarySearch"),
+    onInput: (ev: Event) => {
+      const q = (ev.target as HTMLInputElement).value.trim().toLowerCase();
+      const blocks = document.querySelectorAll<HTMLElement>(".gl-block");
+      blocks.forEach((b) => {
+        const items = b.querySelectorAll<HTMLElement>(".gl-item");
+        let any = false;
+        items.forEach((it) => {
+          const hit = !q || it.textContent?.toLowerCase().includes(q);
+          it.style.display = hit ? "" : "none";
+          if (hit) any = true;
+        });
+        b.style.display = any ? "" : "none";
+      });
+      const empty = document.getElementById("gl-empty");
+      if (empty) {
+        const visible = [
+          ...document.querySelectorAll<HTMLElement>(".gl-item"),
+        ].some((it) => it.style.display !== "none");
+        empty.style.display = visible ? "none" : "";
+      }
+    },
+  });
+
+  const kinds: GlossaryKind[] = ["tracker", "general", "french"];
+  const kindLabels: Record<GlossaryKind, string> = {
+    tracker: t(currentLang, "glossaryKindTracker"),
+    general: t(currentLang, "glossaryKindGeneral"),
+    french: t(currentLang, "glossaryKindFrench"),
+  };
+
+  return h(
+    "div",
+    { class: "panel" },
+    h("h2", null, t(currentLang, "glossary")),
+    h("p", { class: "gl-intro", text: t(currentLang, "glossaryIntro") }),
+    h("div", { class: "gl-search" }, query),
+    h("div", { class: "gl-count", text: `${GLOSSARY.length} entrées` }),
+    ...kinds.map((k) =>
+      h(
+        "div",
+        { class: "gl-block" },
+        h("h3", { class: `gl-h gl-${k}`, text: kindLabels[k] }),
+        ...glossaryByKind(k).map(glossaryEntryRow),
+      ),
+    ),
+    h("p", {
+      id: "gl-empty",
+      class: "gl-empty",
+      style: "display:none",
+      text: t(currentLang, "glossaryEmpty"),
+    }),
   );
 }
 
@@ -772,6 +906,7 @@ function boot(): void {
       ),
     ),
     h("div", { class: "grid split" }, buildReferences(), buildSources()),
+    h("div", { class: "panel" }, buildGlossary()),
     h(
       "footer",
       { class: "foot" },
