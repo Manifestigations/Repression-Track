@@ -1,0 +1,9 @@
+title: Hérault Ban Tracker
+description: Litigation tracker for prefectural bans of demonstrations, Hérault, Oct–Nov 2026
+exclude:
+  - node_modules
+  - src
+  - server.ts
+  - package.json
+  - package-lock.json
+  - tsconfig.json
