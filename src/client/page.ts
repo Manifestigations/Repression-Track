@@ -11,16 +11,24 @@ import {
   stats,
   urgencyOf,
   statusClass,
+  verdictClass,
 } from "./model.ts";
-import type { Process, Status, Tier } from "./model.ts";
+import type { Process, Status, Tier, Scope, Stage, Verdict } from "./model.ts";
 import { PROCESSES, REFERENCES, TRIGGERS } from "./data.ts";
 import { EPISODES } from "./episodes.ts";
 import { NOTES, SANCTIONS } from "./notes.ts";
 import { SOURCES } from "./sources.ts";
-import { renderTimeline, renderDeadlines, renderStatusMix } from "./chart.ts";
+import {
+  renderTimeline,
+  renderDeadlines,
+  renderStatusMix,
+  renderCoverage,
+} from "./chart.ts";
 
 interface State {
+  scope: Scope | "all";
   tier: Tier | "all";
+  stage: Stage | "all";
   status: Status | "all";
   query: string;
   onlyUnverified: boolean;
@@ -28,28 +36,61 @@ interface State {
 }
 
 const STATE: State = {
+  scope: "all",
   tier: "all",
+  stage: "all",
   status: "all",
   query: "",
   onlyUnverified: false,
   onlyOpen: false,
 };
 
+const STAGES: Stage[] = [
+  "ban",
+  "refere",
+  "fond",
+  "controle",
+  "interpellation",
+  "enquete",
+  "poursuite",
+  "audience",
+  "condamnation",
+  "appel",
+  "mesure",
+  "indemnite",
+  "parlementaire",
+  "circulaire",
+];
+
+const STATUSES: Status[] = [
+  "rejet",
+  "accueil",
+  "encours",
+  "averifier",
+  "clos",
+  "sansobjet",
+];
+
 let currentLang: Lang = "en";
 
 function filtered(): Process[] {
   const q = STATE.query.trim().toLowerCase();
   return PROCESSES.filter((p) => {
+    if (STATE.scope !== "all" && p.scope !== STATE.scope) return false;
     if (STATE.tier !== "all" && p.tier !== STATE.tier) return false;
+    if (STATE.stage !== "all" && p.stage !== STATE.stage) return false;
     if (STATE.status !== "all" && p.status !== STATE.status) return false;
     if (STATE.onlyUnverified && !p.unverified) return false;
-    if (STATE.onlyOpen && p.status !== "encours" && p.status !== "averifier") return false;
+    if (STATE.onlyOpen && p.status !== "encours" && p.status !== "averifier")
+      return false;
     if (!q) return true;
     return (
       p.ref.toLowerCase().includes(q) ||
       p.title.toLowerCase().includes(q) ||
       p.forum.toLowerCase().includes(q) ||
-      p.note.toLowerCase().includes(q)
+      p.note.toLowerCase().includes(q) ||
+      (p.city ?? "").toLowerCase().includes(q) ||
+      (p.dept ?? "").toLowerCase().includes(q)
     );
   });
 }
@@ -73,17 +114,22 @@ function deadlineCell(p: Process): HTMLElement {
         "td",
         null,
         h("div", { class: "dl", text: fmtDate(past.date, currentLang) }),
-        h("div", { class: "flag", text: `${past.label} — ${t(currentLang, "overdue")}` }),
+        h("div", {
+          class: "flag",
+          text: `${past.label} — ${t(currentLang, "overdue")}`,
+        }),
       );
     }
     return h("td", null, h("span", { class: "flag", text: "—" }));
   }
-  const conf = t(currentLang, n.confidence);
   return h(
     "td",
     { title: n.basis },
     h("div", { class: "dl", text: fmtDate(n.date, currentLang) }),
-    h("div", { class: "conf", text: `${n.label} · ${conf}` }),
+    h("div", {
+      class: "conf",
+      text: `${n.label} · ${t(currentLang, n.confidence)}`,
+    }),
   );
 }
 
@@ -97,10 +143,35 @@ function row(p: Process): HTMLElement {
       { class: "title" },
       h("b", { text: p.title }),
       h("span", { text: `${p.forum}${p.order ? ` · ${p.order}` : ""}` }),
-      p.unverified ? h("div", { class: "flag", text: "▲ unverified — not opened" }) : null,
+      p.unverified
+        ? h("div", { class: "flag", text: "▲ unverified — not opened" })
+        : null,
     ),
-    h("td", null, h("span", { class: `pill tier-${p.tier}`, text: t(currentLang, p.tier) })),
-    h("td", null, h("span", { class: statusClass(p.status), text: t(currentLang, p.status) })),
+    h(
+      "td",
+      null,
+      h("div", { text: p.city ?? "—" }),
+      h("span", { class: "conf", text: p.dept ? `dept ${p.dept}` : p.scope }),
+    ),
+    h("td", null, h("span", { class: "conf", text: t(currentLang, p.stage) })),
+    h(
+      "td",
+      null,
+      h("span", {
+        class: statusClass(p.status),
+        text: t(currentLang, p.status),
+      }),
+      p.verdict
+        ? h(
+            "div",
+            { style: "margin-top:4px" },
+            h("span", {
+              class: verdictClass(p.verdict),
+              text: t(currentLang, p.verdict),
+            }),
+          )
+        : null,
+    ),
     deadlineCell(p),
     countdownCell(p),
     h("td", {
@@ -110,7 +181,11 @@ function row(p: Process): HTMLElement {
   );
 }
 
-function kpiCard(n: string | number, label: string, tone?: string): HTMLElement {
+function kpiCard(
+  n: string | number,
+  label: string,
+  tone?: string,
+): HTMLElement {
   return h(
     "div",
     { class: `kpi${tone ? ` ${tone}` : ""}` },
@@ -123,12 +198,26 @@ function buildTable(): HTMLElement {
   const rows = sortByUrgency(filtered());
   const body = rows.length
     ? rows.map(row)
-    : [h("tr", null, h("td", { colspan: 7, class: "empty", text: t(currentLang, "noRows") }))];
+    : [
+        h(
+          "tr",
+          null,
+          h("td", {
+            colspan: 8,
+            class: "empty",
+            text: t(currentLang, "noRows"),
+          }),
+        ),
+      ];
 
   return h(
     "div",
     { class: "panel" },
-    h("h2", null, `${t(currentLang, "filters")} — ${rows.length}/${PROCESSES.length}`),
+    h(
+      "h2",
+      null,
+      `${t(currentLang, "filters")} — ${rows.length}/${PROCESSES.length}`,
+    ),
     h(
       "div",
       { class: "body tight" },
@@ -143,7 +232,8 @@ function buildTable(): HTMLElement {
             null,
             h("th", { text: t(currentLang, "colRef") }),
             h("th", { text: t(currentLang, "colProcess") }),
-            h("th", { text: t(currentLang, "colTier") }),
+            h("th", { text: t(currentLang, "colPlace") }),
+            h("th", { text: t(currentLang, "colStage") }),
             h("th", { text: t(currentLang, "colStatus") }),
             h("th", { text: t(currentLang, "colNext") }),
             h("th", { text: t(currentLang, "colCountdown") }),
@@ -157,30 +247,39 @@ function buildTable(): HTMLElement {
 }
 
 function buildLedger(): HTMLElement {
-  const items: { ref: string; label: string; date: string; basis: string; conf: string; days: number }[] = [];
+  type Item = {
+    ref: string;
+    label: string;
+    date: string;
+    basis: string;
+    confidence: string;
+    days: number;
+  };
+  const items: Item[] = [];
   for (const p of PROCESSES) {
     for (const d of p.deadlines) {
       if (d.closed) continue;
       items.push({
-        p: undefined as never,
         ref: p.ref,
         label: d.label,
         date: d.date,
         basis: d.basis,
         confidence: d.confidence,
         days: daysUntil(d.date),
-      } as never);
+      });
     }
   }
-  const sorted = (items as unknown as { ref: string; label: string; date: string; basis: string; confidence: string; days: number }[])
-    .sort((a, b) => a.date.localeCompare(b.date));
+  const sorted = items.sort((a, b) => a.date.localeCompare(b.date));
 
   const rows = sorted.map((d) => {
     const u = urgencyOf(d.days);
     return h(
       "div",
       { class: "row", title: d.basis },
-      h("div", { class: "d", text: d.date.slice(8, 10) + "/" + d.date.slice(5, 7) }),
+      h("div", {
+        class: "d",
+        text: d.date.slice(8, 10) + "/" + d.date.slice(5, 7),
+      }),
       h(
         "div",
         { class: "t" },
@@ -188,7 +287,10 @@ function buildLedger(): HTMLElement {
         h("small", { text: d.basis }),
         h("small", {
           class: `conf cd ${u}`,
-          text: d.days < 0 ? t(currentLang, "overdue") : `${d.days} ${t(currentLang, "day")} · ${t(currentLang, d.confidence)}`,
+          text:
+            d.days < 0
+              ? t(currentLang, "overdue")
+              : `${d.days} ${t(currentLang, "day")} · ${t(currentLang, d.confidence)}`,
         }),
       ),
     );
@@ -209,7 +311,10 @@ function buildTriggers(): HTMLElement {
     return h(
       "div",
       { class: "row" },
-      h("div", { class: "d", text: tr.date.slice(8, 10) + "/" + tr.date.slice(5, 7) }),
+      h("div", {
+        class: "d",
+        text: tr.date.slice(8, 10) + "/" + tr.date.slice(5, 7),
+      }),
       h(
         "div",
         { class: "t" },
@@ -240,7 +345,9 @@ function buildNotes(): HTMLElement {
       h(
         "ul",
         { class: "notes" },
-        ...NOTES.map((n) => h("li", null, h("b", { text: n.title }), ` — ${n.body}`)),
+        ...NOTES.map((n) =>
+          h("li", null, h("b", { text: n.title }), ` — ${n.body}`),
+        ),
       ),
     ),
   );
@@ -254,7 +361,11 @@ function buildSanctions(): HTMLElement {
     h(
       "div",
       { class: "body" },
-      h("ul", { class: "notes" }, ...SANCTIONS.map((s) => h("li", { text: s }))),
+      h(
+        "ul",
+        { class: "notes" },
+        ...SANCTIONS.map((s) => h("li", { text: s })),
+      ),
     ),
   );
 }
@@ -273,7 +384,14 @@ function buildReferences(): HTMLElement {
         h(
           "thead",
           null,
-          h("tr", null, h("th", { text: "Ref." }), h("th", { text: "Date" }), h("th", { text: "Forum" }), h("th", { text: "Holding" })),
+          h(
+            "tr",
+            null,
+            h("th", { text: "Ref." }),
+            h("th", { text: "Date" }),
+            h("th", { text: "Forum" }),
+            h("th", { text: "Holding" }),
+          ),
         ),
         h(
           "tbody",
@@ -282,7 +400,14 @@ function buildReferences(): HTMLElement {
             h(
               "tr",
               null,
-              h("td", { class: "ref" }, r.ref, r.weight === "non-ouvert" ? h("div", { class: "flag", text: "▲" }) : null),
+              h(
+                "td",
+                { class: "ref" },
+                r.ref,
+                r.weight === "non-ouvert"
+                  ? h("div", { class: "flag", text: "▲" })
+                  : null,
+              ),
               h("td", { class: "dl", text: fmtDate(r.date, currentLang) }),
               h("td", { text: r.forum }),
               h("td", { text: r.holding }),
@@ -306,7 +431,16 @@ function buildSources(): HTMLElement {
         "ul",
         { class: "notes" },
         ...SOURCES.map((s) =>
-          h("li", null, h("a", { href: s.url, target: "_blank", rel: "noopener noreferrer", text: s.label })),
+          h(
+            "li",
+            null,
+            h("a", {
+              href: s.url,
+              target: "_blank",
+              rel: "noopener noreferrer",
+              text: s.label,
+            }),
+          ),
         ),
       ),
     ),
@@ -318,41 +452,85 @@ function buildEpisodes(): HTMLElement {
     "div",
     { class: "episodes" },
     ...EPISODES.map((e) =>
-      h("div", { class: "chip", title: e.detail }, h("b", { text: e.label }), ` · ${e.detail}`),
+      h(
+        "div",
+        { class: "chip", title: e.detail },
+        h("b", { text: e.label }),
+        ` · ${e.detail}`,
+      ),
     ),
   );
 }
 
-function buildControls(rerender: () => void): HTMLElement {
-  const tierSel = h(
+function select<T extends string>(
+  value: T,
+  options: [T, string][],
+  onChange: (v: T) => void,
+): HTMLSelectElement {
+  const sel = h(
     "select",
     {
-      onChange: (ev: Event) => {
-        STATE.tier = (e.target as HTMLSelectElement).value as Tier | "all";
-        rerender();
-      },
+      onChange: (ev: Event) =>
+        onChange((ev.target as HTMLSelectElement).value as T),
     },
-    h("option", { value: "all", text: t(currentLang, "allTiers") }),
-    h("option", { value: "admin", text: t(currentLang, "admin") }),
-    h("option", { value: "penal", text: t(currentLang, "penal") }),
-    h("option", { value: "indemn", text: t(currentLang, "indemn") }),
+    ...options.map(([v, label]) => h("option", { value: v, text: label })),
   );
-  tierSel.value = STATE.tier;
+  sel.value = value;
+  return sel;
+}
 
-  const statusSel = h(
-    "select",
-    {
-      onChange: (ev: Event) => {
-        STATE.status = (e.target as HTMLSelectElement).value as Status | "all";
-        rerender();
-      },
+function buildControls(rerender: () => void): HTMLElement {
+  const scopeSel = select<Scope | "all">(
+    STATE.scope,
+    [
+      ["all", t(currentLang, "allScopes")],
+      ["herault", t(currentLang, "herault")],
+      ["occitanie", t(currentLang, "occitanie")],
+      ["national", t(currentLang, "national")],
+    ],
+    (v) => {
+      STATE.scope = v;
+      rerender();
     },
-    h("option", { value: "all", text: t(currentLang, "allStatuses") }),
-    ...(["rejet", "accueil", "encours", "averifier", "clos", "sansobjet"] as Status[]).map((s) =>
-      h("option", { value: s, text: t(currentLang, s) }),
-    ),
   );
-  statusSel.value = STATE.status;
+
+  const tierSel = select<Tier | "all">(
+    STATE.tier,
+    [
+      ["all", t(currentLang, "allTiers")],
+      ["admin", t(currentLang, "admin")],
+      ["penal", t(currentLang, "penal")],
+      ["indemn", t(currentLang, "indemn")],
+    ],
+    (v) => {
+      STATE.tier = v;
+      rerender();
+    },
+  );
+
+  const stageSel = select<Stage | "all">(
+    STATE.stage,
+    [
+      ["all", t(currentLang, "allStages")],
+      ...STAGES.map((s) => [s, t(currentLang, s)] as [Stage, string]),
+    ],
+    (v) => {
+      STATE.stage = v;
+      rerender();
+    },
+  );
+
+  const statusSel = select<Status | "all">(
+    STATE.status,
+    [
+      ["all", t(currentLang, "allStatuses")],
+      ...STATUSES.map((s) => [s, t(currentLang, s)] as [Status, string]),
+    ],
+    (v) => {
+      STATE.status = v;
+      rerender();
+    },
+  );
 
   const search = h("input", {
     type: "search",
@@ -386,7 +564,9 @@ function buildControls(rerender: () => void): HTMLElement {
     class: "btn",
     text: t(currentLang, "reset"),
     onClick: () => {
+      STATE.scope = "all";
       STATE.tier = "all";
+      STATE.stage = "all";
       STATE.status = "all";
       STATE.query = "";
       STATE.onlyUnverified = false;
@@ -409,8 +589,12 @@ function buildControls(rerender: () => void): HTMLElement {
   return h(
     "div",
     { class: "controls" },
+    h("label", { text: t(currentLang, "scope") }),
+    scopeSel,
     h("label", { text: t(currentLang, "tier") }),
     tierSel,
+    h("label", { text: t(currentLang, "stage") }),
+    stageSel,
     h("label", { text: t(currentLang, "status") }),
     statusSel,
     search,
@@ -418,7 +602,7 @@ function buildControls(rerender: () => void): HTMLElement {
     h("label", { class: "toggle" }, open, t(currentLang, "onlyOpen")),
     reset,
     h("div", { class: "spacer" }),
-    reset === null ? null : langBtn,
+    langBtn,
   );
 }
 
@@ -433,8 +617,9 @@ function boot(): void {
   const labels: Record<string, string> = {
     colNext: t(currentLang, "colNext"),
     day: t(currentLang, "day"),
+    colProcess: t(currentLang, "colProcess"),
   };
-  for (const k of ["rejet", "accueil", "encours", "averifier", "clos", "sansobjet"]) {
+  for (const k of [...STATUSES, "herault", "occitanie", "national"]) {
     labels[k] = t(currentLang, k);
   }
 
@@ -451,8 +636,18 @@ function boot(): void {
       h(
         "div",
         { class: "stamp" },
-        h("div", null, `${t(currentLang, "asof")} `, h("strong", { text: fmtDate(TODAY, currentLang) })),
-        h("div", null, `${t(currentLang, "verified")} `, h("strong", { text: fmtDate(TODAY, currentLang) })),
+        h(
+          "div",
+          null,
+          `${t(currentLang, "asof")} `,
+          h("strong", { text: fmtDate(TODAY, currentLang) }),
+        ),
+        h(
+          "div",
+          null,
+          `${t(currentLang, "verified")} `,
+          h("strong", { text: fmtDate(TODAY, currentLang) }),
+        ),
       ),
     ),
     buildEpisodes(),
@@ -460,8 +655,13 @@ function boot(): void {
       "div",
       { class: "kpis" },
       kpiCard(s.total, t(currentLang, "kpiTotal")),
+      kpiCard(s.herault, t(currentLang, "kpiHerault")),
+      kpiCard(s.national + s.occitanie, t(currentLang, "kpiNational")),
       kpiCard(s.open, t(currentLang, "kpiOpen")),
       kpiCard(s.critical, t(currentLang, "kpiCritical"), "crit"),
+      kpiCard(s.arrests, t(currentLang, "kpiArrests")),
+      kpiCard(s.trials, t(currentLang, "kpiTrials")),
+      kpiCard(s.bans, t(currentLang, "kpiBans")),
       kpiCard(s.unverified, t(currentLang, "kpiUnverified"), "warn"),
     ),
     buildControls(rerender),
@@ -482,9 +682,24 @@ function boot(): void {
         h(
           "div",
           { class: "legend" },
-          h("span", null, h("i", { style: "background:#4f8cff" }), t(currentLang, "admin")),
-          h("span", null, h("i", { style: "background:#ff6b6b" }), t(currentLang, "penal")),
-          h("span", null, h("i", { style: "background:#ffd166" }), t(currentLang, "indemn")),
+          h(
+            "span",
+            null,
+            h("i", { style: "background:#4f8cff" }),
+            t(currentLang, "admin"),
+          ),
+          h(
+            "span",
+            null,
+            h("i", { style: "background:#ff6b6b" }),
+            t(currentLang, "penal"),
+          ),
+          h(
+            "span",
+            null,
+            h("i", { style: "background:#ffd166" }),
+            t(currentLang, "indemn"),
+          ),
         ),
       ),
       h(
@@ -494,18 +709,69 @@ function boot(): void {
           "div",
           { class: "panel" },
           h("h2", null, t(currentLang, "deadlines")),
-          h("div", { class: "chart-wrap mid" }, h("canvas", { id: "deadlines" })),
+          h(
+            "div",
+            { class: "chart-wrap mid" },
+            h("canvas", { id: "deadlines" }),
+          ),
         ),
         h(
           "div",
           { class: "panel" },
           h("h2", null, t(currentLang, "statusMix")),
-          h("div", { class: "chart-wrap short" }, h("canvas", { id: "statusMix" })),
+          h(
+            "div",
+            { class: "chart-wrap short" },
+            h("canvas", { id: "statusMix" }),
+          ),
         ),
       ),
     ),
-    h("div", { class: "grid split" }, buildReferences(), h("aside", { class: "grid" }, buildSanctions(), buildNotes())),
-    buildSources(),
+    h(
+      "div",
+      { class: "grid split" },
+      h(
+        "div",
+        { class: "panel" },
+        h("h2", null, t(currentLang, "coverage")),
+        h("div", { class: "chart-wrap mid" }, h("canvas", { id: "coverage" })),
+      ),
+      h(
+        "div",
+        { class: "grid" },
+        h(
+          "div",
+          { class: "panel" },
+          h("h2", null, t(currentLang, "caveats")),
+          h(
+            "div",
+            { class: "body" },
+            h(
+              "ul",
+              { class: "notes" },
+              ...NOTES.map((n) =>
+                h("li", null, h("b", { text: n.title }), ` — ${n.body}`),
+              ),
+            ),
+          ),
+        ),
+        h(
+          "div",
+          { class: "panel" },
+          h("h2", null, t(currentLang, "sanctions")),
+          h(
+            "div",
+            { class: "body" },
+            h(
+              "ul",
+              { class: "notes" },
+              ...SANCTIONS.map((s) => h("li", { text: s })),
+            ),
+          ),
+        ),
+      ),
+    ),
+    h("div", { class: "grid split" }, buildReferences(), buildSources()),
     h(
       "footer",
       { class: "foot" },
@@ -517,6 +783,7 @@ function boot(): void {
   renderTimeline(rows, labels);
   renderDeadlines(rows, labels);
   renderStatusMix(rows, labels);
+  renderCoverage(rows, labels);
 }
 
 export function start(lang: Lang): void {
